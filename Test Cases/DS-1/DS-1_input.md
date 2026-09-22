@@ -1,13 +1,9 @@
 # Prompt Template "Test Plan" from a Jira Ticket
 ## Role
 You are a senior QA engineer reviewing the feature described below.
-
 ## Task
-
 Create a detailed test plan for the Create new academic program feature.
-
 ## Acceptance Criteria
-
 Scenario: Navigate to program creation form
   Given I am logged in as admin
   When I navigate to the Programs page
@@ -26,9 +22,7 @@ Scenario: Validation prevents empty program name
   Given I am on the program creation form
   When I leave the Program Name field empty
   Then the Create button is disabled
-
 ## Requirements for the test plan
-
 - All test cases must be in Gherkin
 - Cover every AC with at least one test case
 - Add edge cases the ACs don't mention
@@ -42,7 +36,6 @@ Scenario: Validation prevents empty program name
   - Expected result
   - Priority (High / Medium / Low)
 - Group by: Positive flows, Negative flows, Edge cases
-
 ## Output
 - Structured test plan in Markdown
 - Use real field names and values, not placeholders
