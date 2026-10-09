@@ -1,6 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
+import { expect, test } from '../fixtures/cleanup.fixture';
 
 dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
@@ -59,6 +60,28 @@ function editProgramButton(page: Page, programName: string) {
   return page.getByRole('button', { name: `Edit ${programName}`, exact: true });
 }
 
+async function submitCreateProgram(
+  page: Page,
+  dialog: Locator,
+  trackProgram: (uuid: string) => void,
+) {
+  const created = page.waitForResponse((response) => {
+    if (response.request().method() !== 'POST' || !response.ok()) return false;
+    try {
+      return new URL(response.url()).pathname === '/api/programs';
+    } catch {
+      return false;
+    }
+  });
+  await dialog.getByRole('button', { name: 'Create' }).click();
+  const body = await (await created).json();
+  const id = body?.data?.id;
+  if (typeof id !== 'string') {
+    throw new Error('Create program response did not include data.id');
+  }
+  trackProgram(id);
+}
+
 test.describe('DS-1: Create new academic program (admin)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -85,6 +108,7 @@ test.describe('DS-1: Create new academic program (admin)', () => {
 
   test('TC-002: A valid program is created and appears in the program list', async ({
     page,
+    trackProgram,
   }) => {
     const programName = `Web Development 2026-${Date.now()}`;
     const description = 'Full-stack web development program';
@@ -92,7 +116,7 @@ test.describe('DS-1: Create new academic program (admin)', () => {
     const dialog = await openCreateProgramDialog(page);
     await dialog.getByLabel('Program Name').fill(programName);
     await dialog.getByLabel('Description').fill(description);
-    await dialog.getByRole('button', { name: 'Create' }).click();
+    await submitCreateProgram(page, dialog, trackProgram);
 
     await expect(dialog).toBeHidden();
     const row = programRow(page, programName);
@@ -100,12 +124,15 @@ test.describe('DS-1: Create new academic program (admin)', () => {
     await expect(row.getByText(description)).toBeVisible();
   });
 
-  test('TC-003: Program can be created with description left empty', async ({ page }) => {
+  test('TC-003: Program can be created with description left empty', async ({
+    page,
+    trackProgram,
+  }) => {
     const programName = `Data Science Fundamentals-${Date.now()}`;
 
     const dialog = await openCreateProgramDialog(page);
     await dialog.getByLabel('Program Name').fill(programName);
-    await dialog.getByRole('button', { name: 'Create' }).click();
+    await submitCreateProgram(page, dialog, trackProgram);
 
     await expect(dialog).toBeHidden();
     await expect(programRow(page, programName)).toBeVisible();
@@ -138,7 +165,10 @@ test.describe('DS-1: Create new academic program (admin)', () => {
     await expect(dialog.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
-  test('TC-008: Description accepts long text and special characters', async ({ page }) => {
+  test('TC-008: Description accepts long text and special characters', async ({
+    page,
+    trackProgram,
+  }) => {
     const programName = `Cybersecurity 2026-${Date.now()}`;
     const description =
       'Covers OWASP Top 10, TLS 1.3, & "secure by design" — 100% hands-on.';
@@ -146,7 +176,7 @@ test.describe('DS-1: Create new academic program (admin)', () => {
     const dialog = await openCreateProgramDialog(page);
     await dialog.getByLabel('Program Name').fill(programName);
     await dialog.getByLabel('Description').fill(description);
-    await dialog.getByRole('button', { name: 'Create' }).click();
+    await submitCreateProgram(page, dialog, trackProgram);
 
     await expect(dialog).toBeHidden();
     await expect(programRow(page, programName)).toBeVisible();
@@ -154,6 +184,7 @@ test.describe('DS-1: Create new academic program (admin)', () => {
 
   test('TC-009: Leading and trailing spaces in Program Name are trimmed on save', async ({
     page,
+    trackProgram,
   }) => {
     const baseName = `Mobile Apps 2026-${Date.now()}`;
     const paddedName = `  ${baseName}  `;
@@ -162,7 +193,7 @@ test.describe('DS-1: Create new academic program (admin)', () => {
     const dialog = await openCreateProgramDialog(page);
     await dialog.getByLabel('Program Name').fill(paddedName);
     await dialog.getByLabel('Description').fill(description);
-    await dialog.getByRole('button', { name: 'Create' }).click();
+    await submitCreateProgram(page, dialog, trackProgram);
 
     await expect(dialog).toBeHidden();
     const row = programRow(page, baseName);
@@ -172,12 +203,13 @@ test.describe('DS-1: Create new academic program (admin)', () => {
 
   test('TC-010: Very long program names are accepted (no client maxlength today)', async ({
     page,
+    trackProgram,
   }) => {
     const programName = `Len-${Date.now()}-` + 'Y'.repeat(300);
 
     const dialog = await openCreateProgramDialog(page);
     await dialog.getByLabel('Program Name').fill(programName);
-    await dialog.getByRole('button', { name: 'Create' }).click();
+    await submitCreateProgram(page, dialog, trackProgram);
 
     await expect(dialog).toBeHidden();
     await expect(editProgramButton(page, programName)).toBeVisible();
@@ -185,13 +217,14 @@ test.describe('DS-1: Create new academic program (admin)', () => {
 
   test('TC-011: AI Generation Config can be expanded without blocking create', async ({
     page,
+    trackProgram,
   }) => {
     const programName = `AI Config Smoke ${Date.now()}`;
 
     const dialog = await openCreateProgramDialog(page);
     await dialog.getByRole('button', { name: /Show AI Generation Config/i }).click();
     await dialog.getByLabel('Program Name').fill(programName);
-    await dialog.getByRole('button', { name: 'Create' }).click();
+    await submitCreateProgram(page, dialog, trackProgram);
 
     await expect(dialog).toBeHidden();
     await expect(programRow(page, programName)).toBeVisible();
