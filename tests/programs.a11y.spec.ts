@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 import { ProgramsPage } from '../pages/ProgramsPage';
+import { assertNoAxeViolations } from '../support/axeAssert';
 
 test.describe('Programs accessibility', () => {
   test('Programs page has no detectable axe violations', async ({ page }) => {
@@ -11,7 +12,7 @@ test.describe('Programs accessibility', () => {
 
     const results = await new AxeBuilder({ page }).analyze();
 
-    await expect(results.violations).toEqual([]);
+    await assertNoAxeViolations(results);
   });
 
   test('New Program modal scoped scan has no violations (with optional rule disabled)', async ({
@@ -33,6 +34,6 @@ test.describe('Programs accessibility', () => {
       .disableRules(['button-name'])
       .analyze();
 
-    await expect(results.violations).toEqual([]);
+    await assertNoAxeViolations(results);
   });
 });
