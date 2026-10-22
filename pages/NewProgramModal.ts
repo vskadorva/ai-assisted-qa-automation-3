@@ -8,6 +8,7 @@ export class NewProgramModal {
   readonly cancelButton: Locator;
   readonly createButton: Locator;
   readonly showAiGenerationConfigButton: Locator;
+  readonly validationError: Locator;
 
   constructor(private readonly page: Page) {
     this.dialog = page.getByRole('dialog').filter({
@@ -21,6 +22,9 @@ export class NewProgramModal {
     this.showAiGenerationConfigButton = this.dialog.getByRole('button', {
       name: /Show AI Generation Config/i,
     });
+    this.validationError = this.dialog.getByRole('alert').or(
+      this.dialog.getByText(/already exists|duplicate|unique|maximum|too long|invalid/i),
+    );
   }
 
   async fillProgramName(name: string) {
@@ -55,6 +59,10 @@ export class NewProgramModal {
     });
   }
 
+  async clickCreate() {
+    await this.createButton.click();
+  }
+
   async submitCreate(): Promise<string> {
     const created = this.page.waitForResponse((response) => {
       if (response.request().method() !== 'POST' || !response.ok()) return false;
@@ -64,7 +72,7 @@ export class NewProgramModal {
         return false;
       }
     });
-    await this.createButton.click();
+    await this.clickCreate();
     const body = await (await created).json();
     const id = body?.data?.id;
     if (typeof id !== 'string') {
