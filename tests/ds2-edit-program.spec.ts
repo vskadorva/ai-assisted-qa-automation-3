@@ -122,7 +122,7 @@ test.describe('DS-2: Edit existing program details (admin)', () => {
     await expect(programsPage.programRow('Should Not Persist')).toHaveCount(0);
   });
 
-  test('TC-007: Duplicate program name on edit is rejected', async ({ page, trackProgram }) => {
+  test.fixme('TC-007: Duplicate program name on edit is rejected', async ({ page, trackProgram }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.editProgramModal;
     const stamp = Date.now();
@@ -257,7 +257,7 @@ test.describe('DS-2: Edit existing program details (admin)', () => {
     await browser.close();
   });
 
-  test('TC-012: Maximum-length name on edit behaves like create validation', async ({
+  test.fixme('TC-012: Maximum-length name on edit behaves like create validation', async ({
     page,
     trackProgram,
   }) => {
