@@ -1,0 +1,21 @@
+---
+description: How this project writes Playwright tests — auth, POM,
+  locators, cleanup, data.
+globs: tests/**
+alwaysApply: false
+---
+
+# Playwright Conventions
+
+## Auth        (from auth-strategy.md)
+Stored session by default; UI login only for login-page tests.
+
+## Page Objects (from pom-conventions)
+One POM per page/component; locators in the constructor; no
+assertions in POMs; tests describe intent.
+
+## Locators
+Role/label-based; never CSS selectors; never brittle text.
+
+## Data & cleanup (from api-cleanup)
+Unique data with Date.now(); every test cleans up after itself.

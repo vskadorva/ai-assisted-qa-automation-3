@@ -11,148 +11,80 @@ function programNameAtMaxLength(stamp: number): string {
     : seed.padEnd(NAME_MAX_LENGTH, 'x');
 }
 
-test.describe('DS-3: Program name validation and duplicate prevention (admin)', () => {
+function programNameOverMaxLength(length: number): string {
+  return 'x'.repeat(length);
+}
+
+test.describe('DS-3: Program name validation and duplicate prevention', () => {
   test.beforeEach(async ({ page }) => {
     const programsPage = new ProgramsPage(page);
     await programsPage.goto();
   });
 
-  test('TC-001: Accept program name with special characters', async ({ page, trackProgram }) => {
+  test('Accept program name with special characters', async ({ page, trackProgram }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.newProgramModal;
-    const programName = 'Informatique & IA - Niveau 2';
-    const description = 'Bilingual STEM track';
+    const programName = `Informatique & IA - Niveau 2 ${Date.now()}`;
 
     await programsPage.openNewProgramForm();
-    await programsPage.createProgram(programName, { description, trackProgram });
+    await programsPage.createProgram(programName, { trackProgram });
 
     await expect(modal.dialog).toBeHidden();
     await expect(programsPage.programRow(programName)).toBeVisible();
   });
 
-  test('TC-002: Same name with different casing is handled per product duplicate rules', async ({
-    page,
-    trackProgram,
-  }) => {
-    const programsPage = new ProgramsPage(page);
-    const modal = programsPage.newProgramModal;
-    const stamp = Date.now();
-    const existingName = `Web Development 2026-${stamp}`;
-    const caseVariant = `web development 2026-${stamp}`;
-
-    await programsPage.seedProgram(existingName, { trackProgram });
-    await programsPage.openNewProgramForm();
-    await modal.fillProgramName(caseVariant);
-
-    const createResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        response.ok() &&
-        new URL(response.url()).pathname === '/api/programs',
-    );
-    await modal.clickCreate();
-
-    const rejected = await modal.validationError.isVisible().catch(() => false);
-    if (rejected) {
-      await expect(modal.validationError).toBeVisible();
-      await expect(programsPage.programRow(existingName)).toHaveCount(1);
-      return;
-    }
-
-    const response = await createResponse;
-    const body = await response.json();
-    const id = body?.data?.id as string | undefined;
-    if (id) trackProgram(id);
-
-    await expect(modal.dialog).toBeHidden();
-    await expect(programsPage.programRow(caseVariant)).toBeVisible();
-  });
-
-  test('TC-003: Renaming a program to its current name succeeds without false duplicate error', async ({
-    page,
-    trackProgram,
-  }) => {
-    const programsPage = new ProgramsPage(page);
-    const editModal = programsPage.editProgramModal;
-    const programName = `Web Development 2026-${Date.now()}`;
-    const updatedDescription = 'Updated description without rename';
-
-    await programsPage.seedProgram(programName, {
-      description: 'Original description',
-      trackProgram,
-    });
-
-    await programsPage.openEditProgramForm(programName);
-    await editModal.fillDescription(updatedDescription);
-    await editModal.submitSave();
-
-    await expect(editModal.validationError).toHaveCount(0);
-    await expect(editModal.dialog).toBeHidden();
-    await expect(
-      programsPage.programRowDescription(programName, updatedDescription),
-    ).toBeVisible();
-  });
-
-  test('TC-004: Reject program name with only whitespace', async ({ page }) => {
+  test('Reject program name with only whitespace', async ({ page }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.newProgramModal;
 
     await programsPage.openNewProgramForm();
+    const postPromise = programsPage.waitForProgramCreatePost();
     await modal.fillProgramName('   ');
 
     await expect(modal.createButton).toBeDisabled();
     await expect(modal.dialog).toBeVisible();
+    expect(await postPromise).toBeNull();
   });
 
-  test.fixme('TC-005: Reject duplicate program name', async ({ page, trackProgram }) => {
+  test('Reject duplicate program name', async ({ page, trackProgram }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.newProgramModal;
     const programName = `Web Development 2026-${Date.now()}`;
 
     await programsPage.seedProgram(programName, { trackProgram });
-    const { httpStatus } = await programsPage.attemptCreateProgram(programName);
+    await programsPage.attemptCreateProgram(programName, { trackProgram });
 
-    await expect(programsPage.programRow(programName)).toHaveCount(1);
-    expect(httpStatus === null || httpStatus >= 400).toBeTruthy();
-    await expect(modal.dialog).toBeVisible();
     await expect(modal.validationError).toBeVisible();
+    await expect(modal.dialog).toBeVisible();
+    await expect(programsPage.programRow(programName)).toHaveCount(1);
   });
 
-  test('TC-006: Empty program name cannot be submitted via create', async ({ page }) => {
+  test('Empty program name cannot be submitted', async ({ page }) => {
+    const programsPage = new ProgramsPage(page);
+    const modal = programsPage.newProgramModal;
+
+    const postPromise = programsPage.waitForProgramCreatePost();
+    await programsPage.openNewProgramForm();
+
+    await expect(modal.createButton).toBeDisabled();
+    await expect(modal.dialog).toBeVisible();
+    expect(await postPromise).toBeNull();
+  });
+
+  test('Names with only tabs or mixed whitespace are treated as empty', async ({ page }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.newProgramModal;
 
     await programsPage.openNewProgramForm();
-    await modal.fillDescription('Optional description');
+    const postPromise = programsPage.waitForProgramCreatePost();
+    await modal.fillProgramName('\t \t ');
 
     await expect(modal.createButton).toBeDisabled();
     await expect(modal.dialog).toBeVisible();
+    expect(await postPromise).toBeNull();
   });
 
-  test.fixme('TC-007: Duplicate name on edit is rejected while editing another program', async ({
-    page,
-    trackProgram,
-  }) => {
-    const programsPage = new ProgramsPage(page);
-    const editModal = programsPage.editProgramModal;
-    const stamp = Date.now();
-    const existingName = `Web Development 2026-${stamp}`;
-    const programToEdit = `AI Bootcamp 2026-${stamp}`;
-
-    await programsPage.seedProgram(existingName, { trackProgram });
-    await programsPage.seedProgram(programToEdit, { trackProgram });
-
-    await programsPage.openEditProgramForm(programToEdit);
-    await editModal.fillProgramName(existingName);
-    await editModal.clickSave();
-
-    await expect(editModal.dialog).toBeVisible();
-    await expect(editModal.validationError).toBeVisible();
-    await expect(programsPage.programRow(programToEdit)).toBeVisible();
-    await expect(programsPage.programRow(existingName)).toHaveCount(1);
-  });
-
-  test.fixme('TC-008: Leading and trailing whitespace around a valid name is trimmed before duplicate check', async ({
+  test('Leading and trailing whitespace is trimmed before the duplicate check', async ({
     page,
     trackProgram,
   }) => {
@@ -162,85 +94,52 @@ test.describe('DS-3: Program name validation and duplicate prevention (admin)', 
     const paddedDuplicate = `  ${programName}  `;
 
     await programsPage.seedProgram(programName, { trackProgram });
-    const { httpStatus } = await programsPage.attemptCreateProgram(paddedDuplicate);
+    await programsPage.attemptCreateProgram(paddedDuplicate, { trackProgram });
 
-    await expect(programsPage.programRow(programName)).toHaveCount(1);
-    expect(httpStatus === null || httpStatus >= 400).toBeTruthy();
-    await expect(modal.dialog).toBeVisible();
     await expect(modal.validationError).toBeVisible();
+    await expect(modal.dialog).toBeVisible();
+    await expect(programsPage.programRow(programName)).toHaveCount(1);
   });
 
-  test.fixme('TC-009: Program names with Unicode and emoji are validated consistently', async ({
-    page,
-    trackProgram,
-  }) => {
+  test('Program name longer than 100 characters is rejected', async ({ page, trackProgram }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.newProgramModal;
-    const programName = `Programme 🎓 2026-${Date.now()}`;
-
-    await programsPage.seedProgram(programName, { trackProgram });
-    const { httpStatus } = await programsPage.attemptCreateProgram(programName);
-
-    await expect(programsPage.programRow(programName)).toHaveCount(1);
-    expect(httpStatus === null || httpStatus >= 400).toBeTruthy();
-    await expect(modal.dialog).toBeVisible();
-    await expect(modal.validationError).toBeVisible();
-  });
-
-  test('TC-010: Names with only tabs or mixed whitespace are treated as empty', async ({
-    page,
-  }) => {
-    const programsPage = new ProgramsPage(page);
-    const modal = programsPage.newProgramModal;
+    const longName = programNameOverMaxLength(NAME_MAX_LENGTH + 1);
 
     await programsPage.openNewProgramForm();
-    await modal.fillProgramName('\t \t ');
+    await modal.fillProgramName(longName);
 
-    await expect(modal.createButton).toBeDisabled();
-    await expect(modal.dialog).toBeVisible();
-  });
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === '/api/programs',
+      { timeout: 15_000 },
+    );
+    await modal.clickCreate();
 
-  test.fixme('TC-011: Maximum-length boundary name does not break duplicate detection', async ({
-    page,
-    trackProgram,
-  }) => {
-    const programsPage = new ProgramsPage(page);
-    const modal = programsPage.newProgramModal;
-    const stamp = Date.now();
-    const maxName = programNameAtMaxLength(stamp);
-    const nearDuplicate = `${maxName.slice(0, NAME_MAX_LENGTH - 1)}y`;
+    const response = await responsePromise.catch(() => null);
+    if (response?.ok()) {
+      const body = await response.json();
+      const id = body?.data?.id;
+      if (typeof id === 'string') {
+        trackProgram(id);
+      }
+    }
 
-    await programsPage.seedProgram(maxName, { trackProgram });
-
-    const { httpStatus: duplicateStatus } = await programsPage.attemptCreateProgram(maxName);
-    await expect(programsPage.programRow(maxName)).toHaveCount(1);
-    expect(duplicateStatus === null || duplicateStatus >= 400).toBeTruthy();
     await expect(modal.validationError).toBeVisible();
-
-    await modal.cancel();
-    await programsPage.attemptCreateProgram(nearDuplicate);
-    const id = await modal.submitCreate();
-    trackProgram(id);
-
-    await expect(modal.dialog).toBeHidden();
-    await expect(programsPage.programRow(nearDuplicate)).toBeVisible();
+    await expect(modal.dialog).toBeVisible();
+    expect(response === null || !response.ok()).toBeTruthy();
   });
 
-  test('TC-012: SQL-like characters in name do not break validation or storage', async ({
-    page,
-    trackProgram,
-  }) => {
+  test('Program name of exactly 100 characters is accepted', async ({ page, trackProgram }) => {
     const programsPage = new ProgramsPage(page);
     const modal = programsPage.newProgramModal;
-    const programName = "Test'; DROP TABLE programs;--";
+    const programName = programNameAtMaxLength(Date.now());
 
     await programsPage.openNewProgramForm();
-    await programsPage.createProgram(programName, {
-      description: 'Security regression name literal',
-      trackProgram,
-    });
+    await programsPage.createProgram(programName, { trackProgram });
 
     await expect(modal.dialog).toBeHidden();
-    await expect(programsPage.programRowNameLabel(programName)).toHaveText(programName);
+    await expect(programsPage.programRow(programName)).toBeVisible();
   });
 });

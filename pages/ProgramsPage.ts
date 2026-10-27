@@ -72,9 +72,23 @@ export class ProgramsPage {
     await this.editProgramModal.dialog.waitFor({ state: 'visible' });
   }
 
+  waitForProgramCreatePost(timeoutMs = 3_000) {
+    return this.page
+      .waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          new URL(response.url()).pathname === '/api/programs',
+        { timeout: timeoutMs },
+      )
+      .catch(() => null);
+  }
+
   async attemptCreateProgram(
     programName: string,
-    options?: { description?: string },
+    options?: {
+      description?: string;
+      trackProgram?: (uuid: string) => void;
+    },
   ): Promise<{ httpStatus: number | null }> {
     await this.openNewProgramForm();
     const modal = this.newProgramModal;
@@ -94,6 +108,13 @@ export class ProgramsPage {
 
     await modal.clickCreate();
     const response = await responsePromise;
+    if (response?.ok() && options?.trackProgram) {
+      const body = await response.json();
+      const id = body?.data?.id;
+      if (typeof id === 'string') {
+        options.trackProgram(id);
+      }
+    }
     return { httpStatus: response ? response.status() : null };
   }
 
