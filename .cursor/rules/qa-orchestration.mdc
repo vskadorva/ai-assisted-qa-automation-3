@@ -26,6 +26,15 @@ At most 3 delegations per task; never re-run an identical failing spec more than
 
 A human approves any merge and any filed bug.
 
+## Guardrails
+
+- A human approves every merge and every filed bug — no subagent merges, and bug-reporter files only after a human confirms the defect.
+- No subagent edits application source.
+- Blast radius:
+  - **test-writer** — writes test code only under `tests/`, `pages/`, `fixtures/`; no commits or PRs unless asked.
+  - **triage** — read-only (`readonly: true`); reads CI logs, artifacts, and repo; returns a diagnosis, changes nothing.
+  - **bug-reporter** — read-only on the repo (`readonly: true`); its only write is one Jira bug linked to the story.
+
 ## Done
 
 The suite is green for the ticket, or a bug is filed and linked.

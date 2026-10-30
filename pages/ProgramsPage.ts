@@ -13,6 +13,9 @@ export class ProgramsPage {
   readonly pageSubtitle: Locator;
   readonly newProgramButton: Locator;
   readonly programsTable: Locator;
+  readonly emptyStateMessage: Locator;
+  readonly emptyStateCreateButton: Locator;
+  readonly alert: Locator;
 
   constructor(private readonly page: Page) {
     this.newProgramModal = new NewProgramModal(page);
@@ -21,6 +24,11 @@ export class ProgramsPage {
     this.pageSubtitle = page.getByText('Manage academic programs and semesters');
     this.newProgramButton = page.getByRole('button', { name: '+ New Program' });
     this.programsTable = page.getByRole('main').getByRole('table');
+    this.emptyStateMessage = page.getByRole('paragraph').filter({
+      hasText: 'No programs yet. Create your first program to get started.',
+    });
+    this.emptyStateCreateButton = page.getByRole('button', { name: 'Create Program' });
+    this.alert = page.getByRole('alert');
   }
 
   async goto() {
@@ -30,6 +38,22 @@ export class ProgramsPage {
   async openNewProgramForm() {
     await this.newProgramButton.click();
     await this.newProgramModal.dialog.waitFor({ state: 'visible' });
+  }
+
+  /** Tabs from the current focus until the New Program button is active. */
+  async tabToNewProgramButton() {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const focused = await this.newProgramButton.evaluate(
+        (element) => document.activeElement === element,
+      );
+      if (focused) return;
+      await this.page.keyboard.press('Tab');
+    }
+    throw new Error('Tab did not reach the New Program button');
+  }
+
+  async pressEnter() {
+    await this.page.keyboard.press('Enter');
   }
 
   programRow(programName: string): Locator {
