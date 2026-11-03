@@ -31,6 +31,10 @@ export class EditProgramModal {
     await this.programNameInput.fill(name);
   }
 
+  async clearProgramName() {
+    await this.programNameInput.clear();
+  }
+
   async fillDescription(description: string) {
     await this.descriptionInput.fill(description);
   }
@@ -74,5 +78,34 @@ export class EditProgramModal {
     });
     await this.clickSave();
     await updated;
+  }
+
+  async attemptSave(options?: {
+    trackProgram?: (uuid: string) => void;
+  }): Promise<{ httpStatus: number | null }> {
+    const responsePromise = this.page
+      .waitForResponse(
+        (response) => {
+          if (response.request().method() !== 'PATCH') return false;
+          try {
+            return new URL(response.url()).pathname.startsWith('/api/programs/');
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 15_000 },
+      )
+      .catch(() => null);
+
+    await this.clickSave();
+    const response = await responsePromise;
+    if (response?.ok() && options?.trackProgram) {
+      const segments = new URL(response.url()).pathname.split('/').filter(Boolean);
+      const id = segments[segments.length - 1];
+      if (typeof id === 'string' && id.length > 0) {
+        options.trackProgram(id);
+      }
+    }
+    return { httpStatus: response ? response.status() : null };
   }
 }

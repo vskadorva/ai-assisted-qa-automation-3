@@ -107,6 +107,22 @@ export class ProgramsPage {
       .catch(() => null);
   }
 
+  waitForProgramPatch(timeoutMs = 3_000) {
+    return this.page
+      .waitForResponse(
+        (response) => {
+          if (response.request().method() !== 'PATCH') return false;
+          try {
+            return new URL(response.url()).pathname.startsWith('/api/programs/');
+          } catch {
+            return false;
+          }
+        },
+        { timeout: timeoutMs },
+      )
+      .catch(() => null);
+  }
+
   async attemptCreateProgram(
     programName: string,
     options?: {
