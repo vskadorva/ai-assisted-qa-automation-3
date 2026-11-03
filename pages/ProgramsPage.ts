@@ -71,7 +71,10 @@ export class ProgramsPage {
   }
 
   editProgramButton(programName: string): Locator {
-    return this.page.getByRole('button', { name: `Edit ${programName}`, exact: true });
+    return this.programRow(programName).getByRole('button', {
+      name: `Edit ${programName}`,
+      exact: true,
+    });
   }
 
   /** Accessible edit control per Confluence UI map (✏️ → `Edit {name}` button). */
@@ -107,7 +110,7 @@ export class ProgramsPage {
       .catch(() => null);
   }
 
-  waitForProgramPatch(timeoutMs = 3_000) {
+  waitForProgramUpdatePatch(timeoutMs = 3_000) {
     return this.page
       .waitForResponse(
         (response) => {
