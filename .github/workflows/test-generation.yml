@@ -37,9 +37,23 @@ jobs:
           curl https://cursor.com/install -fsS | bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      - name: Verify Jira API credentials
+        env:
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+          ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
+        run: |
+          code="$(curl -s -o /dev/null -w '%{http_code}' \
+            -u "${ATLASSIAN_EMAIL}:${ATLASSIAN_API_TOKEN}" \
+            "https://legionqaschool.atlassian.net/rest/api/3/myself")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Jira REST auth failed (HTTP ${code}). Use ATLASSIAN_EMAIL + API token, not account password."
+            exit 1
+          fi
+
       - name: Work the In Progress backlog
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
           ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -58,7 +72,7 @@ jobs:
 
           Never merge a pull request. Never close or transition the ticket. A human approves every merge and every filed bug.
 
-          Use ATLASSIAN_API_TOKEN for Jira. Use GITHUB_TOKEN for git and pull requests.
+          Use ATLASSIAN_EMAIL with ATLASSIAN_API_TOKEN for Jira (API token auth). Use GITHUB_TOKEN for git and pull requests.
           EOF
           )"
 
