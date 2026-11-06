@@ -35,7 +35,8 @@ export class ProgramsPage {
       hasText: "No programs yet. Create your first program to get started.",
     });
     this.emptyStateCreateButton = page.getByRole("button", {
-      name: "Create Programme",
+      name: "Create Program",
+      exact: true,
     });
     this.alert = page.getByRole("alert");
   }
