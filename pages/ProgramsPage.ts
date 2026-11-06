@@ -28,7 +28,7 @@ export class ProgramsPage {
       "Manage academic programs and semesters",
     );
     this.newProgramButton = page.getByRole("button", {
-      name: "+ New Programme",
+      name: "+ New Program",
     });
     this.programsTable = page.getByRole("main").getByRole("table");
     this.emptyStateMessage = page.getByRole("paragraph").filter({

@@ -1,5 +1,5 @@
 ---
-description: How to drive one QA ticket, a backlog queue, or a red build to done by delegating to the test-writer, triage, and bug-reporter subagents.
+description: How to drive one QA ticket, a backlog queue, or a red build to done by delegating to the test-writer, triage, and bug-reporter subagents, and by self-healing locator drift.
 alwaysApply: true
 ---
 
@@ -13,6 +13,7 @@ During **analyze**, run live UI recon per jira-ticket-to-gherkin step 2 when cre
 
 - **jira-ticket-to-gherkin** — a DS ticket into `features/<key>.feature`. Use this when a ticket exists.
 - **explore-and-generate** — no ticket. One highest-value uncovered flow into `features/explore-<area>-<flow>.feature`. Do not use it when a ticket already exists.
+- **self-heal** — a red run that triage classified as drift (test issue). Re-discover the locator, patch the POM, prove green with assertions unchanged, and open a repair PR. Do not use it when triage says real app bug.
 
 ## Routing
 
@@ -20,10 +21,22 @@ During **analyze**, run live UI recon per jira-ticket-to-gherkin step 2 when cre
 - no ticket / "find what we're not testing" / "explore <page> for untested flows" / "expand coverage" → **explore-and-generate** → one feature file, then the plan-ready path
 - plan ready → delegate to test-writer
 - spec returned → run: `npx playwright test`
-- run is red → delegate to triage
-- real app bug → delegate to bug-reporter
-- test issue → delegate to test-writer (propose a fix; human OKs)
+- run is red → **Heal on red**
 - external backlog trigger → Backlog mode, one ticket at a time
+
+## Heal on red
+
+On a red run, delegate to triage to classify. Do not classify it yourself, and do not heal before that classification.
+
+- **Drift (test issue).** Apply the **self-heal** skill. Re-discover the element with the Playwright MCP, `agent-browser`, or the Playwright CLI. Patch the drifted locator in the POM. Re-run and prove the spec green with the assertions unchanged. Then open a repair PR linked to the failing run. Do not delegate the locator edit to test-writer.
+- **Real app bug.** Delegate to bug-reporter to file the bug and link it to the story. Never heal a bug.
+- **Anything else** (env, flake, or a test issue that is not locator drift). Stop and escalate. Do not heal.
+
+**Budget.** At most 5 heals per run. Each heal is one locator. Leave any further red locator for the next run.
+
+**Stop.** If a heal will not prove green, stop and escalate. Do not try another locator, and do not re-run that same failing spec.
+
+**Never.** Never heal an assertion: do not weaken, delete, or comment out an `expect`. Never merge a repair PR. A human approves every merge.
 
 ## Backlog mode
 
@@ -37,7 +50,7 @@ project = DS AND status = "In Progress" AND (labels is EMPTY OR labels != "tests
 
 **Budget.** At most 5 tickets per run. Leave the rest for the next trigger.
 
-**Per ticket.** analyze → test-writer → `npx playwright test` → triage on red. The coordinator opens one PR for that ticket (test-writer still only writes under `tests/`, `pages/`, `fixtures/`). Put the DS key in the PR title and body. When the PR is open, add the `tests-generated` label on the ticket so the next run skips it.
+**Per ticket.** analyze → test-writer → `npx playwright test` → Heal on red when the run is red. The coordinator opens one PR for that ticket (test-writer still only writes under `tests/`, `pages/`, `fixtures/`). Put the DS key in the PR title and body. When the PR is open, add the `tests-generated` label on the ticket so the next run skips it. A drift repair is a separate PR, linked to the failing run, and stays unmerged.
 
 **Repeated identical failure.** Never re-run that same failing spec again. Stop the ticket, leave its PR unmerged, add `tests-generated` if the PR is open, and move to the next ticket.
 
@@ -59,7 +72,8 @@ A human approves any merge and any filed bug.
   - **test-writer** — writes test code only under `tests/`, `pages/`, `fixtures/`; no commits or PRs unless asked.
   - **triage** — read-only (`readonly: true`); reads CI logs, artifacts, and repo; returns a diagnosis, changes nothing.
   - **bug-reporter** — read-only on the repo (`readonly: true`); its only write is one Jira bug linked to the story.
+  - **self-heal** — one drifted locator in `pages/`; no assertion edits and no application source. Opens a repair PR and does not merge.
 
 ## Done
 
-Single ticket: the suite is green, or a bug is filed and linked. Backlog run: each taken ticket has one open PR linked to the DS key and the `tests-generated` label, and nothing was merged or closed.
+Single ticket: the suite is green, a drift repair PR is open and unmerged, or a bug is filed and linked. Backlog run: each taken ticket has one open PR linked to the DS key and the `tests-generated` label, and nothing was merged or closed.
