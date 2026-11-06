@@ -49,6 +49,11 @@ export class ProgramsPage {
     await this.newProgramModal.dialog.waitFor({ state: "visible" });
   }
 
+  async clickEmptyStateCreateProgram() {
+    await this.emptyStateCreateButton.click();
+    await this.newProgramModal.dialog.waitFor({ state: "visible" });
+  }
+
   /** Tabs from the current focus until the New Program button is active. */
   async tabToNewProgramButton() {
     for (let attempt = 0; attempt < 40; attempt += 1) {
