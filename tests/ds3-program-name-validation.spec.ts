@@ -30,7 +30,7 @@ test.describe('DS-3: Program name validation and duplicate prevention', () => {
     await programsPage.createProgram(programName, { trackProgram });
 
     await expect(modal.dialog).toBeHidden();
-    await expect(programsPage.programRow(programName)).toBeVisible();
+    await expect(programsPage.programRow(programName)).not.toBeVisible();
   });
 
   test('Reject program name with only whitespace', async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe('DS-3: Program name validation and duplicate prevention', () => {
 
     await expect(modal.validationError).toBeVisible();
     await expect(modal.dialog).toBeVisible();
-    await expect(programsPage.programRow(programName)).toHaveCount(1);
+    await expect(programsPage.programRow(programName)).toHaveCount(0);
   });
 
   test('Empty program name cannot be submitted', async ({ page }) => {

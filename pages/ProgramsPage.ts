@@ -1,9 +1,9 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Locator, Page } from "@playwright/test";
 
-import { EditProgramModal } from './EditProgramModal';
-import { NewProgramModal } from './NewProgramModal';
+import { EditProgramModal } from "./EditProgramModal";
+import { NewProgramModal } from "./NewProgramModal";
 
-const BASE_URL = process.env.DIDAXIS_URL ?? 'https://test.didaxis.studio';
+const BASE_URL = process.env.DIDAXIS_URL ?? "https://test.didaxis.studio";
 const PROGRAMS_URL = `${BASE_URL}/programs`;
 
 export class ProgramsPage {
@@ -20,15 +20,24 @@ export class ProgramsPage {
   constructor(private readonly page: Page) {
     this.newProgramModal = new NewProgramModal(page);
     this.editProgramModal = new EditProgramModal(page);
-    this.pageHeading = page.getByRole('heading', { name: 'Programs', level: 2 });
-    this.pageSubtitle = page.getByText('Manage academic programs and semesters');
-    this.newProgramButton = page.getByRole('button', { name: '+ New Program' });
-    this.programsTable = page.getByRole('main').getByRole('table');
-    this.emptyStateMessage = page.getByRole('paragraph').filter({
-      hasText: 'No programs yet. Create your first program to get started.',
+    this.pageHeading = page.getByRole("heading", {
+      name: "Programmes",
+      level: 2,
     });
-    this.emptyStateCreateButton = page.getByRole('button', { name: 'Create Program' });
-    this.alert = page.getByRole('alert');
+    this.pageSubtitle = page.getByText(
+      "Manage academic programs and semesters",
+    );
+    this.newProgramButton = page.getByRole("button", {
+      name: "+ New Programme",
+    });
+    this.programsTable = page.getByRole("main").getByRole("table");
+    this.emptyStateMessage = page.getByRole("paragraph").filter({
+      hasText: "No programs yet. Create your first program to get started.",
+    });
+    this.emptyStateCreateButton = page.getByRole("button", {
+      name: "Create Programme",
+    });
+    this.alert = page.getByRole("alert");
   }
 
   async goto() {
@@ -37,7 +46,7 @@ export class ProgramsPage {
 
   async openNewProgramForm() {
     await this.newProgramButton.click();
-    await this.newProgramModal.dialog.waitFor({ state: 'visible' });
+    await this.newProgramModal.dialog.waitFor({ state: "visible" });
   }
 
   /** Tabs from the current focus until the New Program button is active. */
@@ -47,18 +56,18 @@ export class ProgramsPage {
         (element) => document.activeElement === element,
       );
       if (focused) return;
-      await this.page.keyboard.press('Tab');
+      await this.page.keyboard.press("Tab");
     }
-    throw new Error('Tab did not reach the New Program button');
+    throw new Error("Tab did not reach the New Program button");
   }
 
   async pressEnter() {
-    await this.page.keyboard.press('Enter');
+    await this.page.keyboard.press("Enter");
   }
 
   programRow(programName: string): Locator {
     return this.programsTable
-      .getByRole('row')
+      .getByRole("row")
       .filter({ has: this.page.getByText(programName, { exact: true }) });
   }
 
@@ -71,12 +80,15 @@ export class ProgramsPage {
   }
 
   editProgramButton(programName: string): Locator {
-    return this.page.getByRole('button', { name: `Edit ${programName}`, exact: true });
+    return this.page.getByRole("button", {
+      name: `Edit ${programName}`,
+      exact: true,
+    });
   }
 
   /** Accessible edit control per Confluence UI map (✏️ → `Edit {name}` button). */
   editActions(): Locator {
-    return this.page.getByRole('button', { name: /^Edit / });
+    return this.page.getByRole("button", { name: /^Edit / });
   }
 
   async seedProgram(
@@ -88,20 +100,20 @@ export class ProgramsPage {
   ) {
     await this.openNewProgramForm();
     await this.createProgram(programName, options);
-    await this.programRow(programName).waitFor({ state: 'visible' });
+    await this.programRow(programName).waitFor({ state: "visible" });
   }
 
   async openEditProgramForm(programName: string) {
     await this.editProgramButton(programName).click();
-    await this.editProgramModal.dialog.waitFor({ state: 'visible' });
+    await this.editProgramModal.dialog.waitFor({ state: "visible" });
   }
 
   waitForProgramCreatePost(timeoutMs = 3_000) {
     return this.page
       .waitForResponse(
         (response) =>
-          response.request().method() === 'POST' &&
-          new URL(response.url()).pathname === '/api/programs',
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/programs",
         { timeout: timeoutMs },
       )
       .catch(() => null);
@@ -124,8 +136,8 @@ export class ProgramsPage {
     const responsePromise = this.page
       .waitForResponse(
         (response) =>
-          response.request().method() === 'POST' &&
-          new URL(response.url()).pathname === '/api/programs',
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/programs",
         { timeout: 15_000 },
       )
       .catch(() => null);
@@ -135,7 +147,7 @@ export class ProgramsPage {
     if (response?.ok() && options?.trackProgram) {
       const body = await response.json();
       const id = body?.data?.id;
-      if (typeof id === 'string') {
+      if (typeof id === "string") {
         options.trackProgram(id);
       }
     }
