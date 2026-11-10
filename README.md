@@ -54,15 +54,26 @@ npm run test:headed  # Headed browser
 npm run report       # Open last HTML report
 ```
 
+Tagged slices (each test carries exactly one of `@smoke`, `@sanity`, `@regression`, `@api`, `@e2e`, `@destructive`):
+
+```bash
+npm run test:smoke
+npm run test:sanity
+npm run test:regression
+npm run test:api
+npm run test:e2e
+npm run test:destructive   # --workers=1 — shared/global state only
+```
+
 Manual-only specs (`*.manual.spec.ts`) are excluded from the default config. Use `playwright.manual.config.ts` when you intentionally run them.
 
 ## Run a tagged slice
 
-Each test should carry a single tag (for example `@regression` or `@DS-3`). Run a subset with `--grep`:
+Tag policy and revert hooks for state-mutating tests live in `.cursor/rules/playwright-conventions.mdc` (§11). Equivalent raw grep:
 
 ```bash
 npx playwright test --grep @regression
-npx playwright test --grep @DS-3
+npx playwright test --grep @destructive --workers=1
 ```
 
 ## CI
@@ -92,9 +103,10 @@ Gherkin plans live under `features/`; implementing specs live under `tests/` wit
 ## Project layout (tests)
 
 ```
-tests/           # Playwright specs
-pages/           # Page objects (role-first locators)
-fixtures/        # Auth cleanup and shared test fixtures
-features/        # Gherkin plans (Jira / explore)
-playwright/.auth # Generated storage state (gitignored)
+tests/              # Playwright specs
+pages/              # Page objects (role-first locators)
+fixtures/           # Auth cleanup and shared test fixtures
+test-data/          # Factories, invalid sets, enums
+features/           # Gherkin plans (Jira / explore)
+playwright/.auth    # Generated storage state (gitignored)
 ```

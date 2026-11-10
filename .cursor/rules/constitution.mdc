@@ -13,7 +13,7 @@ Short guardrails for specs, POMs, and QA automation in this repo.
 | Assertions | Web-first `expect` in tests only — never in `pages/` |
 | Auth | Reuse `storageState` / project fixtures; no per-test login unless the plan requires it |
 | Data | Unique names (Faker or suffixes); clean up what you create (see **api-cleanup** skill) |
-| Tags | Exactly one tag per test (`@DS-…`, `@smoke`, etc.) — not on `describe` |
+| Tags | Exactly one tag per test (`@smoke`, `@sanity`, `@regression`, `@api`, `@e2e`, `@destructive`) — not on `describe` |
 
 | SHOULD | |
 |--------|---|

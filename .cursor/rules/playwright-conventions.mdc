@@ -104,6 +104,33 @@ Why: repeating login makes every test depend on the login page and burns time be
 
 ## 5. Test data
 
+### Layout
+
+| Kind | Location | Use for |
+|------|----------|---------|
+| Happy-path entities | `test-data/factories/` | Faker-backed builders; unique names per call |
+| Invalid / boundary sets | `test-data/invalid/*.ts` | Curated static values (empty, over-max, malformed) |
+| Secrets and base URLs | `process.env` via `playwright.config.ts` | `DIDAXIS_URL`, tokens — never literals in specs |
+| Repeated paths and copy | `test-data/enums/` | Routes, API paths, UI strings used more than once |
+
+✅ Good — `test-data/factories/program.ts`
+
+```typescript
+import { faker } from '@faker-js/faker';
+
+export function buildProgram(overrides?: Partial<ProgramDraft>): ProgramDraft {
+  const stamp = Date.now();
+  return {
+    name: overrides?.name ?? `${faker.commerce.department()} Program ${stamp}`,
+    ...overrides,
+  };
+}
+```
+
+✅ Good — `test-data/invalid/program-names.ts` for whitespace-only and over-max names; import enums from `test-data/enums/api-paths.ts` instead of repeating `'/api/programs'`.
+
+### Cleanup (per-test data)
+
 Track only the program id this test created, and let the fixture delete it.
 
 ✅ Good — `pages/ProgramsPage.ts`
@@ -221,7 +248,7 @@ Why: a one-shot boolean does not retry, so a slow paint fails a check that would
 
 ## 10. Anti-flake
 
-Run fully parallel, retry twice on CI only, trace the first retry, and pin `en-CA` / `America/Toronto`. Do not set `workers: 1`.
+Run fully parallel, retry twice on CI only, trace the first retry, and pin `en-CA` / `America/Toronto`. Use `workers: 1` only for `@destructive` via `npm run test:destructive` — never in the default config.
 
 ✅ Good — `playwright.config.ts`
 
@@ -236,9 +263,64 @@ use: {
 },
 ```
 
-❌ Bad — no `page.clock.install()` in this repo yet, and `workers` is not set.
+❌ Bad — no `page.clock.install()` in this repo yet, and the default config does not set `workers: 1`.
 
-Why: an unpinned timezone or a single worker makes dates and failures differ between your machine and CI, and extra retries hide a local bug.
+Why: an unpinned timezone makes dates differ between your machine and CI; a global `workers: 1` hides parallelism bugs; only shared-state tests need serialization.
+
+## 11. Tagging strategy
+
+Give each test **exactly one** tag. Allowed values:
+
+| Tag | When to use |
+|-----|-------------|
+| `@smoke` | Fast critical path after deploy; minimal happy path |
+| `@sanity` | Targeted check of one feature or fix |
+| `@regression` | Broad functional coverage (default for UI specs) |
+| `@api` | Exercises HTTP/API contracts (with or without browser) |
+| `@e2e` | Full multi-step user journeys through the UI |
+| `@destructive` | Mutates **shared or global** state (locale, roles, feature flags, org settings) |
+
+**`@destructive` is not a severity tag.** A test that only creates and deletes its own entities keeps `@smoke`, `@regression`, `@e2e`, etc. Reserve `@destructive` when other tests or users would see the changed settings if you did not revert.
+
+**Revert hooks.** Any test that mutates shared/global state must restore the prior value in `test.afterEach` or `test.afterAll` (or a dedicated fixture teardown), even when tagged `@destructive`:
+
+```typescript
+test(
+  'Switching locale persists for the org',
+  { tag: '@destructive' },
+  async ({ page }) => {
+  const previousLocale = await readOrgLocale();
+  try {
+    await setOrgLocale('fr-CA');
+    // …assert…
+  } finally {
+    await setOrgLocale(previousLocale);
+  }
+  },
+);
+
+test.afterEach(async () => {
+  await revertGlobalFlags();
+});
+```
+
+Run slices with npm scripts (see `package.json`):
+
+```bash
+npm run test:smoke
+npm run test:regression
+npm run test:destructive   # adds --workers=1
+```
+
+✅ Good — `tests/programs-api-edge-cases.spec.ts`
+
+```typescript
+test('Empty program list shows the empty state', { tag: '@regression' }, async ({ page }) => {
+```
+
+❌ Bad — `{ tag: '@destructive' }` on a test that only `trackProgram`s its own row; two tags on one test; tags on `test.describe`.
+
+Why: CI and local runs grep a single dimension; serial workers apply only where global state would flake in parallel.
 
 ## Do / Don't
 
@@ -251,7 +333,8 @@ Why: an unpinned timezone or a single worker makes dates and failures differ bet
 | `trackProgram(id)` and `DELETE /api/programs/<uuid>` with the bearer token | Delete rows the test did not create, or hardcode the token |
 | Mock only the UI reaction under test; `route.continue()` the rest | Mock the endpoint whose real contract you are asserting |
 | `withTags(['wcag2a', 'wcag2aa'])` and a keyboard `toBeFocused()` check | `.disableRules(...)` to force a green scan |
-| One tag per test; `retries: process.env.CI ? 2 : 0` | `workers: 1`, or retries above 2 |
+| One of `@smoke` … `@destructive` per test; revert hooks on shared-state tests | Two tags, `@destructive` for owned data only, or global `workers: 1` |
+| Faker factories + `test-data/invalid` + enums; `retries: process.env.CI ? 2 : 0` | Inline random data, hardcoded URLs, or retries above 2 |
 | `locale: "en-CA"` and `timezoneId: "America/Toronto"` | Leave date formatting on the machine timezone |
 
 ## Refusals (hard stops)
