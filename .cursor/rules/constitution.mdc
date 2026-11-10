@@ -1,5 +1,5 @@
 ---
-description: Playwright test constitution — non-negotiables, defaults, and anti-patterns for every task
+description: Playwright test constitution, agent governance, and anti-patterns for every task
 alwaysApply: true
 ---
 
@@ -30,6 +30,39 @@ Short guardrails for specs, POMs, and QA automation in this repo.
 | Assertions | No weakening, deleting, or commenting out `expect` to go green |
 | Healing | No locator “heal” when triage says **real app bug** — file the bug instead |
 | Tags | No tags on `test.describe` blocks |
+
+## Agent governance
+
+Behavioral contract for agents in this repo — not enforced by hooks; follow it on every non-trivial task.
+
+### Audit-then-edit
+
+Inspect the repo, docs, and runtime context **before** changing files. Proposals come first; edits come after the confidence gate allows them.
+
+### Proposal (required before edit)
+
+For any non-trivial task, emit a **Proposal** block before editing:
+
+| Field | Content |
+|-------|---------|
+| **Scope** | What will change, and what is explicitly out of scope |
+| **Confidence** | Integer 1–10 |
+| **Rationale** | Why this approach fits the codebase and the request |
+| **Unknowns** | Gaps that could change the plan (missing creds, unclear product behavior, unverified paths) |
+
+Trivial work (typos, single-line fixes obviously requested, pure Q&A with no repo edits) may skip the Proposal.
+
+### Confidence gate
+
+| Confidence | Action |
+|------------|--------|
+| **< 5** | Do **not** proceed with edits. Ask for the missing input or run targeted exploration first. |
+| **5–7** | Proceed only if **Unknowns** are stated explicitly and the human approves the Proposal. |
+| **≥ 8** | Proceed with the plan; still list material Unknowns when they exist. |
+
+### No invention
+
+Never guess or fabricate paths, enum values, env var names, credentials, API messages, or Jira keys. **Ask** the human or **explore** the repo, MCP, and docs until the fact is verified.
 
 ## Skills (`.cursor/skills/`)
 
