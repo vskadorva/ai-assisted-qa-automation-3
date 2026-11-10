@@ -1,0 +1,42 @@
+---
+description: Playwright test constitution — non-negotiables, defaults, and anti-patterns for every task
+alwaysApply: true
+---
+
+# Playwright constitution
+
+Short guardrails for specs, POMs, and QA automation in this repo.
+
+| MUST | |
+|------|---|
+| Locators | Role-first in POMs (`getByRole`, `getByLabel`, `getByText`); no inline locators in specs |
+| Assertions | Web-first `expect` in tests only — never in `pages/` |
+| Auth | Reuse `storageState` / project fixtures; no per-test login unless the plan requires it |
+| Data | Unique names (Faker or suffixes); clean up what you create (see **api-cleanup** skill) |
+| Tags | Exactly one tag per test (`@DS-…`, `@smoke`, etc.) — not on `describe` |
+
+| SHOULD | |
+|--------|---|
+| Factories | Faker (or shared helpers) for entities and form fields |
+| Enums | Shared constants for labels, routes, and API paths used more than once |
+| POM docs | JSDoc on public action methods when intent is not obvious from the name |
+
+| WON'T | |
+|-------|---|
+| XPath | No XPath locators |
+| Sleeps | No `waitForTimeout`; use auto-waiting, `expect`, or event-driven waits |
+| Secrets | No hardcoded credentials or tokens in repo — env / CI secrets only |
+| Types | No `any` in new test code |
+| Assertions | No weakening, deleting, or commenting out `expect` to go green |
+| Healing | No locator “heal” when triage says **real app bug** — file the bug instead |
+| Tags | No tags on `test.describe` blocks |
+
+## Skills (`.cursor/skills/`)
+
+`api-cleanup` · `ci-failure-triage` · `explore-and-generate` · `jira-bug-reporter` · `jira-ticket-to-gherkin` · `pom-conventions` · `self-heal`
+
+## Agents (`.cursor/agents/`)
+
+`test-writer` (plan → spec) · `triage` (classify red runs) · `bug-reporter` (Jira bug after confirmed defect)
+
+Orchestration, backlog, and heal policy live in **qa-orchestration**; a11y scans in `.agents/skills/a11y-checks`.

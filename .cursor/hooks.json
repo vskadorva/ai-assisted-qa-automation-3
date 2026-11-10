@@ -11,6 +11,11 @@
         "command": ".cursor/hooks/assertion-refusal.sh",
         "matcher": "Write",
         "failClosed": true
+      },
+      {
+        "command": ".cursor/hooks/constitution-gate.sh",
+        "matcher": "Write",
+        "failClosed": true
       }
     ]
   }
